@@ -3,54 +3,591 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Gestor de Tareas API REST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tablero Kanban · API REST</title>
+
+  <!-- Tipografía Inter (Google Fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
+    /* ============ Variables globales ============ */
+    :root {
+      --bg: #070b1a;
+      /* fondo oscuro base */
+      --ink: #eaf0ff;
+      /* texto principal */
+      --muted: #9aa8d0;
+      /* texto secundario */
+      --accent: #6ee7f9;
+      /* cian */
+      --accent2: #a78bfa;
+      /* violeta */
+      --cell: 48px;
+      /* tamaño de la cuadrícula de fondo */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+    }
+
+    html,
     body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background: #f4f7f6;
-      color:
-        #333;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      overflow-x: hidden;
+      padding: 48px 20px 64px;
+    }
+
+    /* ============ Fondo animado ============ */
+    /* Cuadrícula que se desplaza, difuminada en los bordes con una máscara */
+    .grid {
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background-image:
+        linear-gradient(rgba(110, 231, 249, .10) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(110, 231, 249, .10) 1px, transparent 1px);
+      background-size: var(--cell) var(--cell);
+      animation: deriva 12s linear infinite;
+      mask-image: radial-gradient(ellipse at 50% 40%, #000 30%, transparent 85%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 30%, transparent 85%);
+    }
+
+    @keyframes deriva {
+      to {
+        background-position: var(--cell) var(--cell);
+      }
+    }
+
+    /* Contenedor de celdas que se encienden (las crea el JS) */
+    .celdas {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .celda {
+      position: absolute;
+      width: var(--cell);
+      height: var(--cell);
+      background: linear-gradient(135deg, rgba(110, 231, 249, .28), rgba(167, 139, 250, .22));
+      box-shadow: 0 0 24px rgba(110, 231, 249, .35);
+      opacity: 0;
+      animation: enciende 3.2s ease-in-out forwards;
+    }
+
+    @keyframes enciende {
+
+      0%,
+      100% {
+        opacity: 0;
+      }
+
+      35%,
+      55% {
+        opacity: 1;
+      }
+    }
+
+    /* Manchas de color desenfocadas detrás del cristal */
+    .orbe {
+      position: fixed;
+      z-index: -4;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: .55;
+    }
+
+    .o1 {
+      width: 380px;
+      height: 380px;
+      background: #4f46e5;
+      top: -80px;
+      left: -80px;
+      animation: flota 14s ease-in-out infinite alternate;
+    }
+
+    .o2 {
+      width: 340px;
+      height: 340px;
+      background: #06b6d4;
+      bottom: -60px;
+      right: -40px;
+      animation: flota 17s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes flota {
+      to {
+        transform: translate(60px, 40px);
+      }
+    }
+
+    /* ============ Liquid glass (header y columnas) ============ */
+    .glass {
+      position: relative;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, .18);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .45),
+        inset 0 -1px 0 rgba(255, 255, 255, .06),
+        inset 0 0 24px rgba(255, 255, 255, .05),
+        0 20px 50px rgba(0, 0, 0, .35);
+      overflow: hidden;
+    }
+
+    /* Brillo especular en la parte superior */
+    .glass::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(120% 60% at 20% -10%, rgba(255, 255, 255, .28), transparent 55%);
+    }
+
+    /* Destello que cruza el panel periódicamente */
+    .glass::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -60%;
+      width: 40%;
+      height: 100%;
+      pointer-events: none;
+      background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .16), transparent);
+      transform: skewX(-18deg);
+      animation: destello 7s ease-in-out infinite;
+    }
+
+    @keyframes destello {
+
+      0%,
+      60% {
+        left: -60%;
+      }
+
+      100% {
+        left: 130%;
+      }
+    }
+
+    /* ============ Layout general ============ */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+    }
+
+    header.glass {
+      padding: 32px 36px;
+    }
+
+    h1 {
+      font-size: clamp(1.7rem, 4vw, 2.6rem);
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+
+    .sub {
+      color: var(--muted);
+      margin-top: 8px;
+      max-width: 60ch;
+      line-height: 1.5;
+    }
+
+    /* Indicador de conexión con la API (verde = ok, rojo = error) */
+    .estado {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: rgba(52, 211, 153, .12);
+      border: 1px solid rgba(52, 211, 153, .35);
+      font-size: .9rem;
+    }
+
+    .punto {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 0 0 rgba(52, 211, 153, .7);
+      animation: pulso 2s infinite;
+    }
+
+    @keyframes pulso {
+      70% {
+        box-shadow: 0 0 0 10px rgba(52, 211, 153, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+      }
+    }
+
+    /* Variante de error: se activa desde JS con la clase .caido */
+    .estado.caido {
+      background: rgba(248, 113, 113, .12);
+      border-color: rgba(248, 113, 113, .4);
+    }
+
+    .estado.caido .punto {
+      background: #f87171;
+      animation: none;
+    }
+
+    /* ============ Formulario para nueva tarea ============ */
+    .nueva {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .nueva input {
+      flex: 1;
+      min-width: 200px;
+      padding: 13px 18px;
+      border-radius: 999px;
+      font: inherit;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .08);
+      border: 1px solid rgba(255, 255, 255, .18);
+    }
+
+    .nueva input::placeholder {
+      color: var(--muted);
+    }
+
+    .nueva button {
+      padding: 13px 26px;
+      border: 0;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      color: #08112b;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 6px 18px rgba(110, 231, 249, .3);
+      transition: transform .2s;
+    }
+
+    .nueva button:hover {
+      transform: translateY(-2px);
+    }
+
+    /* ============ Tablero (3 columnas) ============ */
+    .tablero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+    }
+
+    .columna {
+      padding: 22px;
+      min-height: 320px;
+      transition: outline-color .2s;
+    }
+
+    /* Encabezado de columna: título + contador de tarjetas */
+    .columna h2 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .contador {
+      min-width: 28px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      text-align: center;
+      font-size: .8rem;
+      font-weight: 600;
+      color: #08112b;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+    }
+
+    .lista {
+      display: grid;
+      gap: 12px;
+      min-height: 220px;
+      align-content: start;
+    }
+
+    /* Feedback visual mientras se arrastra una tarjeta sobre la columna */
+    .columna.sobre {
+      outline: 2px dashed var(--accent);
+      outline-offset: -6px;
+    }
+
+    /* Mensaje cuando una columna no tiene tareas */
+    .vacio {
+      color: var(--muted);
+      font-size: .88rem;
+      text-align: center;
+      padding: 24px 0;
+    }
+
+    /* ============ Tarjeta de tarea ============ */
+    /* Fondo translúcido simple (sin backdrop-filter) para no frenar con muchas tarjetas */
+    .tarea {
+      position: relative;
+      z-index: 1;
+      /* queda por encima de los brillos ::before/::after de .glass */
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      cursor: grab;
+      background: rgba(255, 255, 255, .08);
+      border: 1px solid rgba(255, 255, 255, .14);
+      line-height: 1.4;
+      word-break: break-word;
+      transition: transform .3s cubic-bezier(.2, .8, .2, 1), background .3s;
+    }
+
+    .tarea:hover {
+      transform: translateY(-3px);
+      background: rgba(255, 255, 255, .13);
+    }
+
+    .tarea:active {
+      cursor: grabbing;
+    }
+
+    .tarea.arrastrando {
+      opacity: .4;
+    }
+
+    .tarea button {
+      background: none;
+      border: 0;
+      color: var(--muted);
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 8px;
+    }
+
+    .tarea button:hover {
+      color: #f87171;
+      background: rgba(248, 113, 113, .12);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    /* Accesibilidad: sin animaciones si el usuario lo pide */
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
     }
   </style>
 </head>
 
 <body>
-  <h1>Mi Gestor de Tareas (Consumiendo API REST)</h1>
-  <input type="text" id="inputTarea" placeholder="Escribe una nueva tarea...">
-  <button onclick="agregarTarea()">Agregar Tarea</button>
-  <ul id="listaTareas"></ul>
+  <!-- Capas decorativas de fondo -->
+  <div class="orbe o1"></div>
+  <div class="orbe o2"></div>
+  <div class="grid"></div>
+  <div class="celdas"></div>
+
+  <main>
+    <header class="glass">
+      <h1>Tablero Kanban</h1>
+      <p class="sub">Tareas consumidas desde la API REST. Arrastra las tarjetas entre columnas para cambiar su estado.
+      </p>
+
+      <!-- Indicador de conexión: lo actualiza cargarTareas() -->
+      <div class="estado" id="estadoApi"><span class="punto"></span><span id="textoEstado">Conectando...</span></div>
+
+      <!-- Formulario: Enter o clic en Agregar crean la tarea -->
+      <form class="nueva" onsubmit="event.preventDefault(); agregarTarea()">
+        <input type="text" id="inputTarea" placeholder="Escribe una nueva tarea..." autocomplete="off">
+        <button type="submit">Agregar</button>
+      </form>
+    </header>
+
+    <!-- Las columnas se identifican con data-estado, que coincide con el campo "estado" del backend -->
+    <section class="tablero">
+      <div class="columna glass" data-estado="pendiente">
+        <h2>Pendiente <span class="contador">0</span></h2>
+        <div class="lista"></div>
+      </div>
+      <div class="columna glass" data-estado="progreso">
+        <h2>En progreso <span class="contador">0</span></h2>
+        <div class="lista"></div>
+      </div>
+      <div class="columna glass" data-estado="hecho">
+        <h2>Hecho <span class="contador">0</span></h2>
+        <div class="lista"></div>
+      </div>
+    </section>
+  </main>
+
   <script>
     // Apuntamos al puerto expuesto de nuestra API
     const API_URL = 'http://localhost:5000/api/tareas';
-    // 1. CONSUMIR [GET]
+
+    // ---------- 1. CONSUMIR [GET] y pintar el tablero ----------
     async function cargarTareas() {
-      const respuesta = await fetch(API_URL);
-      const tareas = await respuesta.json();
-      const lista = document.getElementById('listaTareas');
-      lista.innerHTML = '';
+      const estadoApi = document.getElementById('estadoApi');
+      const textoEstado = document.getElementById('textoEstado');
+      let tareas;
+
+      try {
+        const respuesta = await fetch(API_URL);
+        tareas = await respuesta.json();
+        // API disponible: indicador verde
+        estadoApi.classList.remove('caido');
+        textoEstado.textContent = 'API conectada';
+      } catch (error) {
+        // API caída o bloqueada por CORS: indicador rojo y salimos
+        estadoApi.classList.add('caido');
+        textoEstado.textContent = 'Sin conexión con la API';
+        return;
+      }
+
+      // Vaciamos todas las columnas antes de repintar
+      document.querySelectorAll('.lista').forEach(l => l.innerHTML = '');
+
       tareas.forEach(t => {
-        lista.innerHTML += `<li>${t.texto} <button
-onclick="eliminarTarea(${t.id})">❌</button></li>`;
+        // Construimos la tarjeta con createElement: textContent evita inyección de HTML
+        const card = document.createElement('div');
+        card.className = 'tarea';
+        card.draggable = true;
+
+        const texto = document.createElement('span');
+        texto.textContent = t.texto;
+
+        const borrar = document.createElement('button');
+        borrar.textContent = '✕';
+        borrar.title = 'Eliminar tarea';
+        borrar.setAttribute('aria-label', 'Eliminar tarea');
+        borrar.onclick = () => eliminarTarea(t.id);
+
+        card.append(texto, borrar);
+
+        // Al empezar a arrastrar guardamos el id; la clase da feedback visual
+        card.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', t.id);
+          card.classList.add('arrastrando');
+        });
+        card.addEventListener('dragend', () => card.classList.remove('arrastrando'));
+
+        // Colocamos la tarjeta en la columna que corresponde a su estado
+        const destino = document.querySelector(`[data-estado="${t.estado}"] .lista`);
+        if (destino) destino.appendChild(card);
+      });
+
+      actualizarColumnas();
+    }
+
+    // Actualiza el contador de cada columna y muestra "Sin tareas" si está vacía
+    function actualizarColumnas() {
+      document.querySelectorAll('.columna').forEach(col => {
+        const lista = col.querySelector('.lista');
+        const total = lista.querySelectorAll('.tarea').length;
+        col.querySelector('.contador').textContent = total;
+        if (total === 0) lista.innerHTML = '<p class="vacio">Sin tareas</p>';
       });
     }
-    // 2. CONSUMIR [POST]
+
+    // ---------- 2. CONSUMIR [POST] ----------
     async function agregarTarea() {
       const input = document.getElementById('inputTarea');
-      if (!input.value) return;
+      const texto = input.value.trim();
+      if (!texto) return; // ignora vacío o solo espacios
+
       await fetch(API_URL, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({texto: input.value})
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texto })
       });
       input.value = '';
       cargarTareas(); // Refrescar la vista
     }
-    // 3. CONSUMIR [DELETE]
+
+    // ---------- 3. CONSUMIR [DELETE] ----------
     async function eliminarTarea(id) {
-      await fetch(`${API_URL}/${id}`, {method: 'DELETE'});
+      await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
       cargarTareas(); // Refrescar la vista
     }
+
+    // ---------- 4. CONSUMIR [PATCH] con drag & drop ----------
+    document.querySelectorAll('.columna').forEach(col => {
+      // preventDefault en dragover es obligatorio: sin él el navegador no permite soltar
+      col.addEventListener('dragover', e => {
+        e.preventDefault();
+        col.classList.add('sobre');
+      });
+      col.addEventListener('dragleave', () => col.classList.remove('sobre'));
+
+      // Al soltar, enviamos el nuevo estado (el de la columna destino) a la API
+      col.addEventListener('drop', async e => {
+        e.preventDefault();
+        col.classList.remove('sobre');
+        const id = e.dataTransfer.getData('text/plain');
+        await fetch(`${API_URL}/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: col.dataset.estado })
+        });
+        cargarTareas();
+      });
+    });
+
+    // ---------- 5. Celdas que se encienden en el fondo ----------
+    (function () {
+      const cont = document.querySelector('.celdas');
+      const s = 48; // debe coincidir con --cell
+
+      // Crea una celda en una posición aleatoria alineada a la cuadrícula
+      function crea() {
+        const c = document.createElement('div');
+        c.className = 'celda';
+        const cols = Math.ceil(window.innerWidth / s);
+        const filas = Math.ceil(window.innerHeight / s);
+        c.style.left = (Math.floor(Math.random() * cols) * s) + 'px';
+        c.style.top = (Math.floor(Math.random() * filas) * s) + 'px';
+        cont.appendChild(c);
+        setTimeout(() => c.remove(), 3300); // se elimina al terminar la animación
+      }
+
+      // Respeta la preferencia de movimiento reducido del usuario
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        for (let i = 0; i < 5; i++) crea();
+        setInterval(crea, 450);
+      }
+    })();
+
     // Carga inicial
     cargarTareas();
   </script>
