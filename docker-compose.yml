@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  r2d2:
+    build: ./backend
+    ports:
+    - "5000:5000"
+  c3p0:
+    build: ./frontend
+    ports:
+    - "8082:80"
+    depends_on:
+    - r2d2

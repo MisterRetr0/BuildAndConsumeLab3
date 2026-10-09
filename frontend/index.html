@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Gestor de Tareas API REST</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f4f7f6;
+      color:
+        #333;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Mi Gestor de Tareas (Consumiendo API REST)</h1>
+  <input type="text" id="inputTarea" placeholder="Escribe una nueva tarea...">
+  <button onclick="agregarTarea()">Agregar Tarea</button>
+  <ul id="listaTareas"></ul>
+  <script>
+    // Apuntamos al puerto expuesto de nuestra API
+    const API_URL = 'http://localhost:5000/api/tareas';
+    // 1. CONSUMIR [GET]
+    async function cargarTareas() {
+      const respuesta = await fetch(API_URL);
+      const tareas = await respuesta.json();
+      const lista = document.getElementById('listaTareas');
+      lista.innerHTML = '';
+      tareas.forEach(t => {
+        lista.innerHTML += `<li>${t.texto} <button
+onclick="eliminarTarea(${t.id})">❌</button></li>`;
+      });
+    }
+    // 2. CONSUMIR [POST]
+    async function agregarTarea() {
+      const input = document.getElementById('inputTarea');
+      if (!input.value) return;
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({texto: input.value})
+      });
+      input.value = '';
+      cargarTareas(); // Refrescar la vista
+    }
+    // 3. CONSUMIR [DELETE]
+    async function eliminarTarea(id) {
+      await fetch(`${API_URL}/${id}`, {method: 'DELETE'});
+      cargarTareas(); // Refrescar la vista
+    }
+    // Carga inicial
+    cargarTareas();
+  </script>
+</body>
+
+</html>
