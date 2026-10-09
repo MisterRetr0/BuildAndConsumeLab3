@@ -46,97 +46,25 @@
       padding: 48px 20px 64px;
     }
 
-    /* ============ Fondo animado ============ */
-    /* Cuadrícula que se desplaza, difuminada en los bordes con una máscara */
-    .grid {
+    /* [FRONT-BG] ============ Paisaje estilo Windows 97 ============
+       SVG fijo detrás de todo: cielo azul degradado, nubes blancas y colinas verdes.
+       Es estático (sin animación) y se escala para cubrir la pantalla. */
+    .paisaje {
       position: fixed;
       inset: 0;
-      z-index: -3;
-      background-image:
-        linear-gradient(rgba(110, 231, 249, .10) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(110, 231, 249, .10) 1px, transparent 1px);
-      background-size: var(--cell) var(--cell);
-      animation: deriva 12s linear infinite;
-      mask-image: radial-gradient(ellipse at 50% 40%, #000 30%, transparent 85%);
-      -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 30%, transparent 85%);
-    }
-
-    @keyframes deriva {
-      to {
-        background-position: var(--cell) var(--cell);
-      }
-    }
-
-    /* Contenedor de celdas que se encienden (las crea el JS) */
-    .celdas {
-      position: fixed;
-      inset: 0;
-      z-index: -2;
-      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
       pointer-events: none;
     }
 
-    .celda {
-      position: absolute;
-      width: var(--cell);
-      height: var(--cell);
-      background: linear-gradient(135deg, rgba(110, 231, 249, .28), rgba(167, 139, 250, .22));
-      box-shadow: 0 0 24px rgba(110, 231, 249, .35);
-      opacity: 0;
-      animation: enciende 3.2s ease-in-out forwards;
-    }
-
-    @keyframes enciende {
-
-      0%,
-      100% {
-        opacity: 0;
-      }
-
-      35%,
-      55% {
-        opacity: 1;
-      }
-    }
-
-    /* Manchas de color desenfocadas detrás del cristal */
-    .orbe {
-      position: fixed;
-      z-index: -4;
-      border-radius: 50%;
-      filter: blur(90px);
-      opacity: .55;
-    }
-
-    .o1 {
-      width: 380px;
-      height: 380px;
-      background: #4f46e5;
-      top: -80px;
-      left: -80px;
-      animation: flota 14s ease-in-out infinite alternate;
-    }
-
-    .o2 {
-      width: 340px;
-      height: 340px;
-      background: #06b6d4;
-      bottom: -60px;
-      right: -40px;
-      animation: flota 17s ease-in-out infinite alternate-reverse;
-    }
-
-    @keyframes flota {
-      to {
-        transform: translate(60px, 40px);
-      }
-    }
-
     /* ============ Liquid glass (header y columnas) ============ */
+    /* [FRONT-BG] Tinte azul oscuro en lugar de blanco: el fondo ahora es claro
+       y el texto blanco necesita contraste para leerse bien. */
     .glass {
       position: relative;
       border-radius: 28px;
-      background: linear-gradient(135deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+      background: linear-gradient(135deg, rgba(8, 20, 60, .62), rgba(8, 20, 60, .42));
       backdrop-filter: blur(22px) saturate(180%);
       -webkit-backdrop-filter: blur(22px) saturate(180%);
       border: 1px solid rgba(255, 255, 255, .18);
@@ -291,6 +219,13 @@
       transform: translateY(-2px);
     }
 
+    /* [RETO] Variante roja para la acción destructiva */
+    .nueva button.peligro {
+      color: #fff;
+      background: linear-gradient(135deg, #f87171, #dc2626);
+      box-shadow: 0 6px 18px rgba(220, 38, 38, .35);
+    }
+
     /* ============ Tablero (3 columnas) ============ */
     .tablero {
       display: grid;
@@ -363,12 +298,7 @@
       border: 1px solid rgba(255, 255, 255, .14);
       line-height: 1.4;
       word-break: break-word;
-      transition: transform .3s cubic-bezier(.2, .8, .2, 1), background .3s;
-    }
-
-    .tarea:hover {
-      transform: translateY(-3px);
-      background: rgba(255, 255, 255, .13);
+      /* [FRONT-CARD] Se eliminó la animación: sin transition ni transform en hover */
     }
 
     .tarea:active {
@@ -413,11 +343,36 @@
 </head>
 
 <body>
-  <!-- Capas decorativas de fondo -->
-  <div class="orbe o1"></div>
-  <div class="orbe o2"></div>
-  <div class="grid"></div>
-  <div class="celdas"></div>
+  <!-- [FRONT-BG] Paisaje estilo Windows 97: cielo, nubes y colinas (SVG estático) -->
+  <svg class="paisaje" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs>
+      <!-- Cielo: azul intenso arriba, celeste cerca del horizonte -->
+      <linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#1a5fd0" />
+        <stop offset="0.65" stop-color="#6fb4f5" />
+        <stop offset="1" stop-color="#bfe3ff" />
+      </linearGradient>
+    </defs>
+    <rect width="1600" height="900" fill="url(#cielo)" />
+
+    <!-- Nubes: grupos de elipses blancas superpuestas -->
+    <g fill="#ffffff" opacity="0.95">
+      <ellipse cx="260" cy="170" rx="120" ry="38" />
+      <ellipse cx="340" cy="150" rx="90" ry="36" />
+      <ellipse cx="190" cy="155" rx="70" ry="30" />
+      <ellipse cx="900" cy="110" rx="150" ry="42" />
+      <ellipse cx="990" cy="90" rx="100" ry="38" />
+      <ellipse cx="800" cy="100" rx="80" ry="32" />
+      <ellipse cx="1330" cy="230" rx="130" ry="36" />
+      <ellipse cx="1410" cy="212" rx="85" ry="32" />
+      <ellipse cx="1250" cy="218" rx="70" ry="28" />
+    </g>
+
+    <!-- Colinas: de la más lejana (clara) a la más cercana (oscura) -->
+    <path d="M0 600 Q 250 500 520 580 T 1050 560 T 1600 590 V900 H0 Z" fill="#4cb043" />
+    <path d="M0 680 Q 300 590 640 660 T 1180 650 T 1600 670 V900 H0 Z" fill="#389a32" />
+    <path d="M0 770 Q 350 700 760 760 T 1300 750 T 1600 770 V900 H0 Z" fill="#26802a" />
+  </svg>
 
   <main>
     <header class="glass">
@@ -432,6 +387,8 @@
       <form class="nueva" onsubmit="event.preventDefault(); agregarTarea()">
         <input type="text" id="inputTarea" placeholder="Escribe una nueva tarea..." autocomplete="off">
         <button type="submit">Agregar</button>
+        <!-- [RETO] Botón de eliminación total: dispara eliminarTodas() -->
+        <button type="button" class="peligro" onclick="eliminarTodas()">Eliminar todo</button>
       </form>
     </header>
 
@@ -541,6 +498,14 @@
       cargarTareas(); // Refrescar la vista
     }
 
+    // ---------- [RETO] 3b. CONSUMIR [DELETE] eliminación total ----------
+    // Llama a DELETE /api/tareas (sin id). Pide confirmación porque no se puede deshacer.
+    async function eliminarTodas() {
+      if (!confirm('¿Eliminar TODAS las tareas? Esta acción no se puede deshacer.')) return;
+      await fetch(API_URL, { method: 'DELETE' });
+      cargarTareas(); // Refrescar la vista
+    }
+
     // ---------- 4. CONSUMIR [PATCH] con drag & drop ----------
     document.querySelectorAll('.columna').forEach(col => {
       // preventDefault en dragover es obligatorio: sin él el navegador no permite soltar
@@ -563,30 +528,6 @@
         cargarTareas();
       });
     });
-
-    // ---------- 5. Celdas que se encienden en el fondo ----------
-    (function () {
-      const cont = document.querySelector('.celdas');
-      const s = 48; // debe coincidir con --cell
-
-      // Crea una celda en una posición aleatoria alineada a la cuadrícula
-      function crea() {
-        const c = document.createElement('div');
-        c.className = 'celda';
-        const cols = Math.ceil(window.innerWidth / s);
-        const filas = Math.ceil(window.innerHeight / s);
-        c.style.left = (Math.floor(Math.random() * cols) * s) + 'px';
-        c.style.top = (Math.floor(Math.random() * filas) * s) + 'px';
-        cont.appendChild(c);
-        setTimeout(() => c.remove(), 3300); // se elimina al terminar la animación
-      }
-
-      // Respeta la preferencia de movimiento reducido del usuario
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        for (let i = 0; i < 5; i++) crea();
-        setInterval(crea, 450);
-      }
-    })();
 
     // Carga inicial
     cargarTareas();
