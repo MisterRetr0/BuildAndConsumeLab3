@@ -1,12 +1,42 @@
 version: '3.8'
 services:
+  # [DB] INICIO · Servicio nuevo: base de datos PostgreSQL
+  db:
+    image: postgres:16-alpine
+    environment:                          # credenciales tomadas del archivo .env (no se suben al repo)
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+    - pgdata:/var/lib/postgresql/data     # volumen con nombre: aquí PostgreSQL guarda los datos
+    healthcheck:                          # "lista" = acepta conexiones; r2d2 espera a este estado
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  # [DB] FIN
   r2d2:
     build: ./backend
     ports:
     - "5000:5000"
+    # [DB] INICIO · variables de conexión que lee backend/server.js ("db" = nombre del servicio)
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy        # antes no dependía de nada: ahora espera a PostgreSQL
+    # [DB] FIN
   c3p0:
     build: ./frontend
     ports:
     - "8082:80"
     depends_on:
     - r2d2
+
+# [DB] Declaración del volumen con nombre (administrado por Docker)
+volumes:
+  pgdata:
